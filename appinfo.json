@@ -1,0 +1,28 @@
+{
+  "uuid": "5fe6fa65-93a2-4691-b619-98508f49e10c",
+  "shortName": "KlK",
+  "longName": "KlK",
+  "companyName": "exe",
+  "versionCode": 1,
+  "versionLabel": "1.0.0",
+  "watchapp": {
+    "watchface": true
+  },
+  "appKeys": {
+    "dummy": 0
+  },
+  "resources": {
+    "media": [
+      {
+        "type": "png",
+        "name": "FONT",
+        "file": "images/font.png"
+      },
+      {
+        "type": "png",
+        "name": "FONT_M",
+        "file": "images/font_m.png"
+      }
+    ]
+  }
+}
