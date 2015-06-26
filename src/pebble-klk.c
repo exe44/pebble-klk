@@ -1,16 +1,85 @@
 #include <pebble.h>
+#include <ctype.h>
 
-#define NUM_SIZE 36
-#define NUM_M_SIZE 48
+#define NUM_SIZE    36
+#define NUM_M_SIZE  48
 
-#define ATLAS_NUM 13
-#define ATLAS_HR 11
-#define ATLAS_MIN 12
+#define ATLAS_NUM   13
+#define ATLAS_HR    11
+#define ATLAS_MIN   12
+
+// -----------------------------------------------------------------------------
+  
+enum PersistKey
+{
+  PERSIST_CONFIG = 0
+};
+
+enum MessageKey
+{
+  MSG_CONFIG_BG_COLOR = 0,
+  MSG_CONFIG_TXT_COLOR,
+  MSG_CONFIG_STAR_COLOR
+};
+
+// -----------------------------------------------------------------------------
+    
+struct ConfigData
+{ 
+  GColor bg_color;
+  GColor txt_color;
+  GColor star_color;
+};
+
+static struct ConfigData config_data;
+
+// -----------------------------------------------------------------------------
+
+static void init_config()
+{
+  config_data.bg_color = GColorBlack;
+  config_data.txt_color = GColorWhite;
+  config_data.star_color = GColorWhite;
+  
+  if (persist_exists(PERSIST_CONFIG))
+  {
+    int config_size = sizeof(config_data);
+    int persist_size = persist_get_size(PERSIST_CONFIG);
+    if (persist_size != config_size)
+    {
+      APP_LOG(APP_LOG_LEVEL_WARNING, "config data size not match! need (%d), load (%d). discard config!", config_size, persist_size);
+      persist_delete(PERSIST_CONFIG);
+      return;
+    }
+    
+    persist_read_data(PERSIST_CONFIG, &config_data, persist_size);
+    APP_LOG(APP_LOG_LEVEL_INFO, "config loaded.");
+  }
+  else
+  {
+    APP_LOG(APP_LOG_LEVEL_INFO, "config not exist, inited.");
+  }
+}
+
+static void save_config()
+{
+  int config_size = sizeof(config_data);
+  if (config_size >= PERSIST_DATA_MAX_LENGTH)
+  {
+    APP_LOG(APP_LOG_LEVEL_ERROR, "config data size exceed maximum size! need (%d), max (%d). ignore save!", config_size, PERSIST_DATA_MAX_LENGTH);
+    return;
+  }
+  
+  persist_write_data(PERSIST_CONFIG, &config_data, config_size);
+  APP_LOG(APP_LOG_LEVEL_INFO, "config saved.");
+}
+  
+// -----------------------------------------------------------------------------
 
 static Window* window;
 
-static GBitmap* font_bitmap;
-static GBitmap* font_m_bitmap;
+static GBitmap* font_bitmap = NULL;
+static GBitmap* font_m_bitmap = NULL;
 
 static BitmapLayer* hr_digits[3];
 static BitmapLayer* hr_unit;
@@ -91,10 +160,28 @@ static int calculate_digits(int value, int* result_digits)
   return digit_num;
 }
 
+static void set_time_bitmap_comp_mode(GCompOp mode)
+{
+  for (int i = 0; i < 3; ++i)
+  {
+    bitmap_layer_set_compositing_mode(hr_digits[i], mode);
+    bitmap_layer_set_compositing_mode(min_digits[i], mode);
+  }
+
+  bitmap_layer_set_compositing_mode(hr_unit, mode);
+  bitmap_layer_set_compositing_mode(min_unit, mode);
+}
+
 static void apply_bitmap_atlas(BitmapLayer* bitmap_layer, GBitmap* bitmap, int unit_width, int unit_num, int idx)
 {
   bitmap_layer_set_bitmap(bitmap_layer, bitmap);
-  layer_set_bounds(bitmap_layer_get_layer(bitmap_layer), GRect(-idx * unit_width / 2, 0, unit_width * unit_num, unit_width)); // why need to divide 2?
+
+  int bound_origin_x = -idx * unit_width;
+#ifdef PBL_PLATFORM_APLITE
+  bound_origin_x /= 2; // why need to divide 2?
+#endif
+
+  layer_set_bounds(bitmap_layer_get_layer(bitmap_layer), GRect(bound_origin_x, 0, unit_width * unit_num, unit_width));
 }
 
 static void refresh_time()
@@ -280,7 +367,7 @@ static void spawn_star()
 static bool need_refresh_time = false;
 
 static AnimationImplementation anim_impl;
-static Animation* anim;
+static Animation* anim = NULL;
 
 static float prev_ratio, max_spawn_ratio, spawn_timer;
 static bool time_refreshed;
@@ -293,7 +380,7 @@ static void anim_setup(struct Animation* animation)
   time_refreshed = false;
 }
 
-static void anim_update(struct Animation* animation, const uint32_t time_normalized)
+static void anim_update(struct Animation* animation, const AnimationProgress time_normalized)
 {
   float ratio = (float)time_normalized / ANIMATION_NORMALIZED_MAX;
   float delta_time = (ratio - prev_ratio) * STAR_TRANSITION_PERIOD;
@@ -331,7 +418,6 @@ static void anim_update(struct Animation* animation, const uint32_t time_normali
 }
 
 static void anim_teardown(struct Animation* animation)
-// static void anim_stopped(struct Animation* animation, bool finished, void *context)
 {
   for (int i = 0; i < START_POOL_SIZE; ++i)
     star_pool[i].in_use = false;
@@ -351,7 +437,7 @@ static void star_layer_update_callback(Layer *me, GContext *ctx)
 
       gpath_move_to(star_path, star_pool[i].pos);
 
-      graphics_context_set_fill_color(ctx, GColorWhite);
+      graphics_context_set_fill_color(ctx, config_data.star_color);
       gpath_draw_filled(ctx, star_path);
     }
   }
@@ -374,15 +460,28 @@ static void init_star_transition(Layer* window_layer, GRect* bounds)
   anim_impl.setup = anim_setup;
   anim_impl.update = anim_update;
   anim_impl.teardown = anim_teardown;
+}
+
+static void start_star_transition()
+{
+#ifdef PBL_PLATFORM_APLITE
+  if (anim) animation_destroy(anim);
+#endif
+
   anim = animation_create();
   animation_set_delay(anim, 0);
   animation_set_duration(anim, (int)(STAR_TRANSITION_PERIOD * 1000));
   animation_set_implementation(anim, &anim_impl);
+
+  animation_schedule(anim);
 }
 
-static void deinit_start_transition()
+static void deinit_star_transition()
 {
-  animation_destroy(anim);
+#ifdef PBL_PLATFORM_APLITE
+  if (anim) animation_destroy(anim);
+#endif
+
   layer_destroy(star_layer);
   gpath_destroy(star_path);
   free(curr_star_path_info.points);
@@ -403,7 +502,54 @@ static void handle_min_tick(struct tm* time, TimeUnits units_changed)
     need_refresh_time = true;
   }
 
-  animation_schedule(anim);
+  start_star_transition();
+}
+
+// -----------------------------------------------------------------------------
+
+static void refresh_color_theme()
+{
+  window_set_background_color(window, config_data.bg_color);
+
+#ifdef PBL_COLOR
+  if (font_m_bitmap) gbitmap_destroy(font_m_bitmap);
+  if (font_bitmap) gbitmap_destroy(font_bitmap);
+
+  uint32_t resource_id = RESOURCE_ID_FONT;
+  uint32_t resource_m_id = RESOURCE_ID_FONT_M;
+
+  if (gcolor_equal(GColorRed, config_data.txt_color))
+  {
+    resource_id = RESOURCE_ID_FONT_RED;
+    resource_m_id = RESOURCE_ID_FONT_M_RED;
+  }
+  else if (gcolor_equal(GColorBlack, config_data.txt_color))
+  {
+    resource_id = RESOURCE_ID_FONT_BLACK;
+    resource_m_id = RESOURCE_ID_FONT_M_BLACK;
+  }
+
+  font_bitmap = gbitmap_create_with_resource(resource_id);
+  font_m_bitmap = gbitmap_create_with_resource(resource_m_id);
+#else
+  if (NULL == font_bitmap)
+    font_bitmap = gbitmap_create_with_resource(RESOURCE_ID_FONT);
+  if (NULL == font_m_bitmap)
+    font_m_bitmap = gbitmap_create_with_resource(RESOURCE_ID_FONT_M);
+
+  if (GColorBlack == config_data.bg_color)
+  {
+    set_time_bitmap_comp_mode(GCompOpAssign);
+    config_data.star_color = GColorWhite;
+  }
+  else
+  {
+    set_time_bitmap_comp_mode(GCompOpAssignInverted);
+    config_data.star_color = GColorBlack;
+  }
+#endif
+
+  refresh_time();
 }
 
 // -----------------------------------------------------------------------------
@@ -415,11 +561,6 @@ static void window_load(Window *window)
 
   window_width = bounds.size.w;
   window_height = bounds.size.h;
-
-  //
-
-  font_bitmap = gbitmap_create_with_resource(RESOURCE_ID_FONT);
-  font_m_bitmap = gbitmap_create_with_resource(RESOURCE_ID_FONT_M);
 
   //
 
@@ -445,23 +586,28 @@ static void window_load(Window *window)
   min_unit = bitmap_layer_create(rect);
   layer_add_child(window_layer, bitmap_layer_get_layer(min_unit));
 
+#ifdef PBL_PLATFORM_BASALT
+  set_time_bitmap_comp_mode(GCompOpSet);
+#endif
+  
   //
-
-  init_star_transition(window_layer, &bounds);
 
   time_t timestamp = time(NULL);
   struct tm* time = localtime(&timestamp);
 
   current_hr = format_hr(time->tm_hour);
   current_min = time->tm_min;
-  refresh_time();
+
+  init_star_transition(window_layer, &bounds);
+
+  refresh_color_theme();
 
   tick_timer_service_subscribe(MINUTE_UNIT, handle_min_tick);
 }
 
 static void window_unload(Window *window)
 {
-  deinit_start_transition();
+  deinit_star_transition();
 
   bitmap_layer_destroy(hr_unit);
   bitmap_layer_destroy(min_unit);
@@ -472,14 +618,166 @@ static void window_unload(Window *window)
     bitmap_layer_destroy(min_digits[i]);
   }
 
-  gbitmap_destroy(font_m_bitmap);
-  gbitmap_destroy(font_bitmap);
+  if (font_m_bitmap) gbitmap_destroy(font_m_bitmap);
+  if (font_bitmap) gbitmap_destroy(font_bitmap);
 }
+
+// -----------------------------------------------------------------------------
+
+static unsigned int hex_string_to_uint(const char *hex_string)
+{
+  unsigned int result = 0;
+  const char *p = hex_string;
+  unsigned char c;
+  while ((c = *p) != 0)
+  {
+    c = toupper(c);
+    result <<= 4;
+    if (isdigit(c))
+      result += c - '0';
+    else if (isxdigit(c))
+      result += c - 'A' + 10;
+    else
+      return 0;
+    
+    ++p;
+  }
+  
+  return result;
+}
+
+// static void uint_to_hex_string(unsigned int hex, char* out_hex_string)
+// {
+//   char *p;
+//   unsigned char c;
+//   for (int i = 1; i < 7; ++i)
+//   {
+//     p = &out_hex_string[i];
+//     c = (hex >> (6 - i) * 4) & 0x0F;
+//     if (c >= 10)
+//       *p = 'A' + (c - 10);
+//     else
+//       *p = '0' + c;
+//   }
+  
+//   out_hex_string[0] = '#';
+//   out_hex_string[7] = '\0';
+  
+//   APP_LOG(APP_LOG_LEVEL_DEBUG, "hex_string: %x %s", hex, out_hex_string);
+// }
+
+static GColor get_color_from_hex_string(const char* hex_string)
+{
+  if ('#' == hex_string[0])
+    hex_string += 1;
+  else if (0 == strncmp(hex_string, "0x", 2))
+    hex_string += 2;
+  
+  unsigned int hex = hex_string_to_uint(hex_string);
+  
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "color %s, %x", hex_string, hex);
+    
+#ifdef PBL_COLOR
+  GColor color = GColorFromHEX(hex);
+  return color;
+#else
+  return hex > 0 ? GColorWhite : GColorBlack;
+#endif
+}
+
+// static void get_hex_string_from_color(GColor color, char* out_hex_string)
+// {
+// #ifdef PBL_COLOR
+//   uint8_t r = ((GColor8)color).r / 3.f * 255;
+//   uint8_t g = ((GColor8)color).g / 3.f * 255;
+//   uint8_t b = ((GColor8)color).b / 3.f * 255;
+//   unsigned int hex = (r << 16) + (g << 8) + (b);
+//   uint_to_hex_string(hex, out_hex_string);
+// #else
+//   uint_to_hex_string(GColorWhite == color ? 0xFFFFFF : 0x000000, out_hex_string);
+// #endif
+// }
+
+static void inbox_received_callback(DictionaryIterator *iterator, void *context)
+{
+  APP_LOG(APP_LOG_LEVEL_INFO, "Inbox receive success!");
+  
+  bool need_refresh_color = false;
+  
+  Tuple *t = dict_read_first(iterator);
+  while (t)
+  {
+    switch(t->key)
+    {
+    case MSG_CONFIG_BG_COLOR:
+      APP_LOG(APP_LOG_LEVEL_INFO, "CONFIG_BG_COLOR: %s", t->value->cstring);
+      config_data.bg_color = get_color_from_hex_string(t->value->cstring);
+      need_refresh_color = true;
+      break;
+
+    case MSG_CONFIG_TXT_COLOR:
+      APP_LOG(APP_LOG_LEVEL_INFO, "CONFIG_TXT_COLOR: %s", t->value->cstring);
+      config_data.txt_color = get_color_from_hex_string(t->value->cstring);
+      need_refresh_color = true;
+      break;
+      
+    case MSG_CONFIG_STAR_COLOR:
+      APP_LOG(APP_LOG_LEVEL_INFO, "CONFIG_STAR_COLOR: %s", t->value->cstring);
+      config_data.star_color = get_color_from_hex_string(t->value->cstring);
+      need_refresh_color = true;
+      break;
+      
+    default:
+      APP_LOG(APP_LOG_LEVEL_ERROR, "Key %d not recognized!", (int)t->key);
+      break;
+    }
+
+    t = dict_read_next(iterator);
+  }
+  
+  if (need_refresh_color)
+  {
+    refresh_color_theme();
+    start_star_transition();
+    save_config();
+  }
+}
+
+static void inbox_dropped_callback(AppMessageResult reason, void *context)
+{
+  APP_LOG(APP_LOG_LEVEL_ERROR, "Message dropped!");
+}
+
+static void outbox_failed_callback(DictionaryIterator *iterator, AppMessageResult reason, void *context)
+{
+  APP_LOG(APP_LOG_LEVEL_ERROR, "Outbox send failed!");
+}
+
+static void outbox_sent_callback(DictionaryIterator *iterator, void *context)
+{
+  APP_LOG(APP_LOG_LEVEL_INFO, "Outbox send success!");
+}
+
+static void init_app_message()
+{
+  // Register callbacks
+  app_message_register_inbox_received(inbox_received_callback);
+  app_message_register_inbox_dropped(inbox_dropped_callback);
+  app_message_register_outbox_failed(outbox_failed_callback);
+  app_message_register_outbox_sent(outbox_sent_callback);
+  // Open AppMessage
+  app_message_open(app_message_inbox_size_maximum(), app_message_outbox_size_maximum());
+}
+
+// -----------------------------------------------------------------------------
 
 static void init(void)
 {
+  init_config();
+  init_app_message();
+  
   window = window_create();
-  window_set_background_color(window, GColorBlack);
+  window_set_background_color(window, config_data.bg_color);
   window_set_window_handlers(window, (WindowHandlers) {
     .load = window_load,
     .unload = window_unload,
@@ -496,9 +794,6 @@ static void deinit(void)
 int main(void)
 {
   init();
-
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "Done initializing, pushed window: %p", window);
-
   app_event_loop();
   deinit();
 }

@@ -1,28 +1,70 @@
 {
-  "uuid": "5fe6fa65-93a2-4691-b619-98508f49e10c",
-  "shortName": "KlK",
-  "longName": "KlK",
-  "companyName": "exe",
-  "versionCode": 1,
-  "versionLabel": "1.0.0",
-  "watchapp": {
-    "watchface": true
-  },
   "appKeys": {
-    "dummy": 0
+    "bgColor": 0,
+    "txtColor": 1,
+    "starColor": 2
   },
+  "capabilities": [
+    "configurable"
+  ],
+  "companyName": "exe",
+  "longName": "KlK",
+  "projectType": "native",
   "resources": {
     "media": [
       {
-        "type": "png",
-        "name": "FONT",
-        "file": "images/font.png"
+        "file": "images/font_m.png",
+        "name": "FONT_M",
+        "type": "png"
       },
       {
+        "file": "images/font.png",
+        "name": "FONT",
+        "type": "png"
+      },
+      {
+        "file": "images/font_m_red.png",
+        "name": "FONT_M_RED",
         "type": "png",
-        "name": "FONT_M",
-        "file": "images/font_m.png"
+        "targetPlatforms": [
+          "basalt"
+        ]
+      },
+      {
+        "file": "images/font_red.png",
+        "name": "FONT_RED",
+        "type": "png",
+        "targetPlatforms": [
+          "basalt"
+        ]
+      },
+      {
+        "file": "images/font_m_black.png",
+        "name": "FONT_M_BLACK",
+        "type": "png",
+        "targetPlatforms": [
+          "basalt"
+        ]
+      },
+      {
+        "file": "images/font_black.png",
+        "name": "FONT_BLACK",
+        "type": "png",
+        "targetPlatforms": [
+          "basalt"
+        ]
       }
     ]
+  },
+  "sdkVersion": "3",
+  "shortName": "KlK",
+  "targetPlatforms": [
+    "aplite",
+    "basalt"
+  ],
+  "uuid": "5fe6fa65-93a2-4691-b619-98508f49e10c",
+  "versionLabel": "2.0",
+  "watchapp": {
+    "watchface": true
   }
 }

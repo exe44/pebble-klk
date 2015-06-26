@@ -1,0 +1,90 @@
+<!doctype html>
+<html>
+<head>
+
+  <!-- <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/spectrum/1.6.1/spectrum.min.css"> -->
+  <link rel="stylesheet" type="text/css" href="spectrum-modified.css">
+  <link rel="stylesheet" type="text/css" href="config.css">
+
+  <script>
+    function getQueryParam(variable, defaultValue) {
+      // Find all URL parameters
+      var query = location.search.substring(1);
+      var vars = query.split('&');
+      for (var i = 0; i < vars.length; i++) {
+        var pair = vars[i].split('=');
+
+        // If the query variable parameter is found, decode it to use and return it for use
+        if (pair[0] === variable)
+          return decodeURIComponent(pair[1]);
+      }
+
+      return defaultValue || false;
+    }
+
+    function ConfigSave() {
+      var bgColorValue = $("#bg_color").spectrum("get").toHexString();
+      var txtColorValue = $("#txt_color").spectrum("get").toHexString();
+      var starColorValue = $("#star_color").spectrum("get").toHexString();
+
+      // Set the return URL depending on the runtime environment
+      var return_to = getQueryParam('return_to', 'pebblejs://close#');
+      document.location = return_to + encodeURIComponent(JSON.stringify(
+        {
+          bgColor: bgColorValue,
+          txtColor: txtColorValue,
+          starColor: starColorValue
+        }
+      ));
+    }
+  </script>
+
+</head>
+<body>
+
+<div class='config_block'>
+<span class='config_title'>background</span>
+<input id='bg_color' />
+</div>
+
+<div class='config_block'>
+<span class='config_title'>time</span>
+<input id='txt_color' />
+</div>
+
+<div class='config_block'>
+<span class='config_title'>little stars</span>
+<input id='star_color' />
+</div>
+
+<div class='action_block'>
+<a href="#" class="myButton" onclick="ConfigSave()">Save</a>
+</div>
+
+<script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/spectrum/1.7.0/spectrum.min.js"></script>
+<!-- <script src="jquery-1.11.3.min.js"></script> -->
+<!-- <script src="spectrum.js"></script> -->
+
+<script>
+  $("#bg_color").spectrum({
+    color: getQueryParam('bgColor', '#000'),
+  });
+
+  $("#txt_color").spectrum({
+    color: getQueryParam('txtColor', '#FFF'),
+    showPaletteOnly: true,
+    showPalette:true,
+    hideAfterPaletteSelect:true,
+    palette: [
+      [ 'white', 'red', 'black' ]
+    ]
+  });
+
+  $("#star_color").spectrum({
+    color: getQueryParam('starColor', '#FFF'),
+  });
+</script>
+
+</body>
+</html>
