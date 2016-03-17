@@ -24,11 +24,22 @@ Pebble.addEventListener("ready", function(e) {
 Pebble.addEventListener("showConfiguration", function(e) {
   console.log("Show configuration! payload: " + JSON.stringify(e.payload));
 
-  var configUrl = "https://dl.dropboxusercontent.com/u/203504/pebble/config-klk.html";
+  // var configUrl = "https://dl.dropboxusercontent.com/u/203504/pebble/config-klk.html";
+  var configUrl = "https://shugh.github.io/pebble-klk/config-web/config-klk.html";
 
   var config_json = localStorage.getItem("config");
-  if (config_json) {
-    var config = JSON.parse(config_json);
+  if (config_json === null) {
+    config_json = "{}";
+  }
+  var config = JSON.parse(config_json);
+
+  var watch = Pebble.getActiveWatchInfo ? Pebble.getActiveWatchInfo() : null;
+  if(watch) {
+    config.isPebbleColor = (watch.platform === "aplite") ? 0 : 1;
+    config.isAplite = (watch.platform === "aplite") ? 1 : 0;
+  }
+
+  if (config) {
     console.log("stored config: " + JSON.stringify(config));
 
     var params = "";
