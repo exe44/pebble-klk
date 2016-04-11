@@ -1,11 +1,10 @@
-<!doctype html>
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-
-  <!-- <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/spectrum/1.6.1/spectrum.min.css"> -->
-  <link rel="stylesheet" type="text/css" href="spectrum-modified.css">
-  <link rel="stylesheet" type="text/css" href="config.css">
-
+  <meta charset="UTF-8">
+  <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0" name="viewport">
+  <title></title>
+  <link rel="stylesheet" href="./css/slate.css">
   <script>
     function getQueryParam(variable, defaultValue) {
       // Find all URL parameters
@@ -19,72 +18,178 @@
           return decodeURIComponent(pair[1]);
       }
 
-      return defaultValue || false;
+      return defaultValue;
     }
 
     function ConfigSave() {
-      var bgColorValue = $("#bg_color").spectrum("get").toHexString();
-      var txtColorValue = $("#txt_color").spectrum("get").toHexString();
-      var starColorValue = $("#star_color").spectrum("get").toHexString();
+      // Get value from DOM
+      var settings = {
+        'bgColor' :    $("#bg_color").val(),
+        'starColor' :  $("#star_color").val(),
+        'timeColor' :  $("#time_color").val(),
+        'dateColor' :  $("#date_color").val(),
+        'monthColor' : $("#month_color").val(),
+
+        'isEnableDate' :    Number($("#date_flag").prop('checked')),
+        'isEnableMonth' :   Number($("#month_flag").prop('checked')),
+        'isUseAmPm' :       Number($("#use_ampm").prop('checked')),
+        'isUseLunar' :      Number($("#use_lunar").prop('checked')),
+        'isUsePrefix' :     Number($("#use_prefix").prop('checked')),
+        'isUseFormal' :     Number($("#use_formal").prop('checked')),
+
+        'datePositionType' :  parseInt($("#date_position > .active").attr("value"), 10),
+      };
 
       // Set the return URL depending on the runtime environment
       var return_to = getQueryParam('return_to', 'pebblejs://close#');
-      document.location = return_to + encodeURIComponent(JSON.stringify(
-        {
-          bgColor: bgColorValue,
-          txtColor: txtColorValue,
-          starColor: starColorValue
-        }
-      ));
+      document.location = return_to + encodeURIComponent(JSON.stringify(settings));
     }
   </script>
-
 </head>
 <body>
+  <form id="main-form">
+    <!-- description -->
+    <div class="item-container">
+      <div class="item-container-content">
+        <div class="item">
+          Pebble Watchface "KlK" Configuration
+        </div>
+      </div>
+    </div>
 
-<div class='config_block'>
-<span class='config_title'>background</span>
-<input id='bg_color' />
-</div>
+    <!-- colors -->
+    <div class="item-container">
+      <div class="item-container-header">Colors</div>
+      <div class="item-container-content">
+        <label class="item">
+          Background
+          <input type="text" class="item-color item-color-normal" id="bg_color" value="0x000000">
+        </label>
+        <label class="item pebble_color">
+          Littel Stars
+          <input type="text" class="item-color item-color-normal" id="star_color" value="0xFFFFFF">
+        </label>
+      </div>
+    </div>
 
-<div class='config_block'>
-<span class='config_title'>time</span>
-<input id='txt_color' />
-</div>
+    <!-- time -->
+    <div class="item-container">
+      <div class="item-container-header">Time</div>
+      <div class="item-container-content">
+        <label class="item pebble_color">
+          Color
+          <input type="text" class="item-color item-color-normal" id="time_color" value="0xFFFFFF">
+        </label>
+        <label class="item">
+          Use A.M./P.M. (12h Only)
+          <input type="checkbox" class="item-toggle" id="use_ampm" checked>
+        </label>
+      </div>
+    </div>
 
-<div class='config_block'>
-<span class='config_title'>little stars</span>
-<input id='star_color' />
-</div>
+    <!-- date -->
+    <div class="item-container">
+      <div class="item-container-header">Date</div>
+      <div class="item-container-content">
+        <label class="item">
+          Enable
+          <input type="checkbox" class="item-toggle" id="date_flag" checked>
+        </label>
+        <label class="item pebble_color">
+          Color
+          <input type="text" class="item-color item-color-normal" id="date_color" value="0xFFFFFF">
+        </label>
+      </div>
+    </div>
 
-<div class='action_block'>
-<a href="#" class="myButton" onclick="ConfigSave()">Save</a>
-</div>
+    <!-- month -->
+    <div class="item-container">
+      <div class="item-container-header">Month</div>
+      <div class="item-container-content">
+        <label class="item">
+          Enable
+          <input type="checkbox" class="item-toggle" id="month_flag">
+        </label>
+        <label class="item pebble_color">
+          Color
+          <input type="text" class="item-color item-color-normal" id="month_color" value="0xFFFFFF">
+        </label>
+        <label class="item not_aplite">
+          Use Lunar Calendar Name
+          <input type="checkbox" class="item-toggle" id="use_lunar">
+        </label>
+      </div>
+    </div>
 
-<script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/spectrum/1.7.0/spectrum.min.js"></script>
-<!-- <script src="jquery-1.11.3.min.js"></script> -->
-<!-- <script src="spectrum.js"></script> -->
+    <!-- misc -->
+    <div class="item-container">
+      <div class="item-container-header">Misc</div>
+      <div class="item-container-content">
+        <label class="item not_aplite">
+          Use Formal Number
+          <input type="checkbox" class="item-toggle" id="use_formal">
+        </label>
+        <label class="item">
+          Use Prefix to Date or Month
+          <input type="checkbox" class="item-toggle" id="use_prefix" checked>
+        </label>
+        <label class="item">
+          Date/Month Position
+        </label>
+        <div class="item tab-buttons" id="date_position">
+          <a name="date_position" value="0" class="tab-button active">Top/Bottom</a>
+          <a name="date_position" value="1" class="tab-button">Bottom/Top</a>
+        </div>
+      </div>
+    </div>
 
-<script>
-  $("#bg_color").spectrum({
-    color: getQueryParam('bgColor', '#000'),
-  });
+    <!-- button -->
+    <div class="item-container">
+      <div class="button-container">
+        <input type="button" class="item-button" onclick="ConfigSave()" value="SAVE">
+      </div>
+    </div>
+  </form>
 
-  $("#txt_color").spectrum({
-    color: getQueryParam('txtColor', '#FFF'),
-    showPaletteOnly: true,
-    showPalette:true,
-    hideAfterPaletteSelect:true,
-    palette: [
-      [ 'white', 'red', 'black' ]
-    ]
-  });
+  <script type="text/javascript" src="./js/slate.js"></script>
 
-  $("#star_color").spectrum({
-    color: getQueryParam('starColor', '#FFF'),
-  });
-</script>
+  <script>
+    $("#bg_color").val(getQueryParam('bgColor', '0x000000'));
+    $("#star_color").val(getQueryParam('starColor', '0xFFFFFF'));
+    $("#time_color").val(getQueryParam('timeColor', '0xFFFFFF'));
+    $("#date_color").val(getQueryParam('dateColor', '0xFFFFFF'));
+    $("#month_color").val(getQueryParam('monthColor', '0xFFFFFF'));
+
+    $("#date_flag").prop('checked', (getQueryParam('isEnableDate', "1") === "1"));
+    $("#month_flag").prop('checked', (getQueryParam('isEnableMonth', "0") === "1"));
+    $("#use_ampm").prop('checked', (getQueryParam('isUseAmPm', "1") === "1"));
+    $("#use_lunar").prop('checked', (getQueryParam('isUseLunar', "1") === "1"));
+    $("#use_prefix").prop('checked', (getQueryParam('isUsePrefix', "1") === "1"));
+    $("#use_formal").prop('checked', (getQueryParam('isUseFormal', "0") === "1"));
+
+    $("#date_position > .tab-button").each(function(i, elem) {
+      if ($(elem).attr("value") === getQueryParam('datePositionType', "0")) {
+        $(elem).addClass("active");
+      }
+      else {
+        $(elem).removeClass("active");
+      }
+    });
+
+    if (getQueryParam('isPebbleColor', "1") === "1") {
+      $(".pebble_color").show();
+    }
+    else {
+      $(".pebble_color").hide();
+    }
+
+    if (getQueryParam('isAplite', "1") === "1") {
+      $(".not_aplite").hide();
+    }
+    else {
+      $(".not_aplite").show();
+    }
+  </script>
 
 </body>
 </html>
