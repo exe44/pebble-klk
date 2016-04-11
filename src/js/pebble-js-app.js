@@ -24,8 +24,7 @@ Pebble.addEventListener("ready", function(e) {
 Pebble.addEventListener("showConfiguration", function(e) {
   console.log("Show configuration! payload: " + JSON.stringify(e.payload));
 
-  // var configUrl = "https://dl.dropboxusercontent.com/u/203504/pebble/config-klk.html";
-  var configUrl = "https://shugh.github.io/pebble-klk/config-web/config-klk.html";
+  var configUrl = "https://exe44.github.io/pebble-klk/config-web/config-klk.html";
 
   var config_json = localStorage.getItem("config");
   if (config_json === null) {
